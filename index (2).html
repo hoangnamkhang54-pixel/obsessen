@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>One Wish Willow — Cây Liễu Ước Nguyện</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nosifer&family=Special+Elite&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#000000;
+    --fg:#e9e6df;
+    --dim:#6b6b66;
+    --line:#2a2a26;
+    --blood:#7a0e0e;
+    --glow: #b3aea3;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0;
+    background:var(--bg);
+    color:var(--fg);
+    height:100%;
+    font-family:'Special Elite', monospace;
+    overflow-x:hidden;
+  }
+  body{
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    position:relative;
+  }
+
+  /* subtle film grain / vignette */
+  .grain{
+    pointer-events:none;
+    position:fixed; inset:0; z-index:5;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.75) 100%);
+  }
+  .noise{
+    pointer-events:none;
+    position:fixed; inset:0; z-index:4;
+    opacity:0.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode:overlay;
+  }
+
+  header{
+    text-align:center;
+    margin-top:6vh;
+    z-index:2;
+  }
+  h1{
+    font-family:'Nosifer', 'Special Elite', serif;
+    font-size:clamp(28px, 6vw, 58px);
+    letter-spacing:2px;
+    color:var(--fg);
+    margin:0;
+    text-shadow: 0 0 18px rgba(255,255,255,0.08), 0 0 2px #fff;
+  }
+  .subtitle{
+    color:var(--dim);
+    letter-spacing:4px;
+    font-size:13px;
+    text-transform:uppercase;
+    margin-top:10px;
+  }
+
+  main{
+    width:100%;
+    max-width:640px;
+    display:flex; flex-direction:column; align-items:center;
+    padding:5vh 20px 10vh;
+    z-index:2;
+  }
+
+  .wish-form{
+    width:100%;
+    display:flex; flex-direction:column; align-items:center;
+    gap:22px;
+    transition:opacity .6s ease, transform .6s ease;
+  }
+  .wish-form.hidden{
+    opacity:0;
+    transform:translateY(-10px);
+    pointer-events:none;
+    height:0; overflow:hidden;
+    margin:0;
+  }
+
+  textarea{
+    width:100%;
+    min-height:110px;
+    background:transparent;
+    border:1px solid var(--line);
+    border-bottom:1px solid var(--dim);
+    color:var(--fg);
+    font-family:'Special Elite', monospace;
+    font-size:16px;
+    padding:16px;
+    resize:vertical;
+    outline:none;
+    transition:border-color .3s;
+  }
+  textarea::placeholder{ color:#4a4a44; font-style:italic; }
+  textarea:focus{ border-color:var(--glow); }
+
+  .btn{
+    background:transparent;
+    border:1px solid var(--fg);
+    color:var(--fg);
+    font-family:'Special Elite', monospace;
+    letter-spacing:3px;
+    text-transform:uppercase;
+    font-size:13px;
+    padding:14px 34px;
+    cursor:pointer;
+    transition:all .35s ease;
+  }
+  .btn:hover:not(:disabled){
+    background:var(--fg);
+    color:#000;
+    box-shadow:0 0 24px rgba(255,255,255,0.25);
+  }
+  .btn:disabled{ opacity:.35; cursor:not-allowed; }
+
+  .status{
+    font-size:12px;
+    color:var(--dim);
+    letter-spacing:1px;
+    min-height:16px;
+  }
+
+  /* --- Tree scene --- */
+  .tree-scene{
+    display:none;
+    width:100%;
+    flex-direction:column;
+    align-items:center;
+    gap:18px;
+  }
+  .tree-scene.active{ display:flex; }
+
+  .tree-wrap{
+    position:relative;
+    width:100%;
+    max-width:480px;
+    aspect-ratio: 3 / 4;
+    cursor:pointer;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .tree-wrap img{
+    width:100%; height:100%;
+    object-fit:cover;
+    display:block;
+    filter: grayscale(1) contrast(1.35) brightness(0.62);
+    transition: filter .3s ease, transform .3s ease;
+  }
+  .tree-wrap:hover img{
+    filter: grayscale(1) contrast(1.5) brightness(0.7);
+    transform:scale(1.02);
+  }
+  .tree-wrap::after{
+    /* vignette phủ lên ảnh cho hợp tone đen trắng u ám */
+    content:"";
+    position:absolute; inset:0;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(0,0,0,0.85) 100%);
+    pointer-events:none;
+  }
+  .tree-wrap.shake{ animation:shake .25s; }
+  @keyframes shake{
+    0%,100%{ transform:translateX(0); }
+    25%{ transform:translateX(-4px) rotate(-0.5deg); }
+    75%{ transform:translateX(4px) rotate(0.5deg); }
+  }
+
+  .prompt-text{
+    font-size:14px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--fg);
+    animation:pulse 1.4s ease-in-out infinite;
+    text-align:center;
+  }
+  @keyframes pulse{
+    0%,100%{ opacity:.35; }
+    50%{ opacity:1; }
+  }
+
+  .counter{
+    font-size:11px;
+    color:var(--dim);
+    letter-spacing:2px;
+  }
+
+  /* --- Stick figure scare --- */
+  .scare-layer{
+    position:fixed;
+    inset:0;
+    z-index:20;
+    pointer-events:none;
+    display:none;
+  }
+  .scare-layer.active{ display:block; }
+
+  .stickman{
+    position:absolute;
+    bottom:8%;
+    right:-220px;
+    width:130px;
+    transition:right 2.6s cubic-bezier(.2,.7,.2,1);
+  }
+  .stickman.walked-in{ right:38%; }
+  .stickman svg{ width:100%; height:auto; overflow:visible; }
+
+  .stick-limb{
+    stroke:var(--fg);
+    stroke-width:4;
+    stroke-linecap:round;
+  }
+  .leg-l, .leg-r{ transform-origin: 50px 90px; }
+  .stickman.walking .leg-l{ animation:swingL .35s linear infinite; }
+  .stickman.walking .leg-r{ animation:swingR .35s linear infinite; }
+  @keyframes swingL{ 0%,100%{ transform:rotate(18deg);} 50%{ transform:rotate(-18deg);} }
+  @keyframes swingR{ 0%,100%{ transform:rotate(-18deg);} 50%{ transform:rotate(18deg);} }
+
+  .arm-pen{
+    transform-origin: 50px 55px;
+    opacity:0;
+  }
+  .stickman.writing .arm-pen{
+    opacity:1;
+    animation:jitter .18s linear infinite;
+  }
+  @keyframes jitter{
+    0%,100%{ transform:rotate(-6deg); }
+    50%{ transform:rotate(6deg); }
+  }
+
+  .scrawl{
+    position:absolute;
+    bottom:26%;
+    right:8%;
+    max-width:340px;
+    font-family:'Caveat', cursive;
+    font-weight:600;
+    font-size:34px;
+    line-height:1.15;
+    color:#c9c4bb;
+    text-align:right;
+    white-space:pre-wrap;
+    text-shadow:0 0 10px rgba(0,0,0,0.6);
+  }
+  .scrawl .cursor{
+    display:inline-block;
+    width:3px; height:28px;
+    background:#c9c4bb;
+    vertical-align:middle;
+    animation:blink .6s steps(1) infinite;
+    margin-left:2px;
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .flash{
+    position:fixed; inset:0;
+    background:#fff;
+    opacity:0;
+    z-index:30;
+    pointer-events:none;
+  }
+  .flash.go{
+    animation:flashfx .18s ease-out;
+  }
+  @keyframes flashfx{
+    0%{ opacity:0.85; }
+    100%{ opacity:0; }
+  }
+
+  .restart{
+    margin-top:26px;
+    display:none;
+    z-index:2;
+    position:relative;
+  }
+  .restart.show{ display:inline-block; }
+
+  footer{
+    margin-top:auto;
+    padding:20px;
+    font-size:10px;
+    color:#3a3a36;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    z-index:2;
+  }
+
+  audio{ display:none; }
+</style>
+</head>
+<body>
+
+<div class="noise"></div>
+<div class="grain"></div>
+<div class="flash" id="flash"></div>
+
+<!-- ================= NHẠC NỀN =================
+  Tự chèn file nhạc của bạn: đặt file nhạc (ví dụ music.mp3) cùng thư mục với index.html
+  trên GitHub repo, rồi sửa "src" bên dưới thành đúng tên file.
+  Trình duyệt chặn autoplay có âm thanh nếu chưa có tương tác của người dùng,
+  nên nhạc sẽ tự phát ngay sau lần click/chạm đầu tiên trên trang (đã xử lý ở phần JS).
+================================================= -->
+<audio id="bg-music" loop preload="auto">
+  <source src="music.mp3" type="audio/mpeg">
+</audio>
+
+<header>
+  <h1>One Wish Willow</h1>
+  <div class="subtitle">Cây Liễu Ước Nguyện — Một điều ước duy nhất</div>
+</header>
+
+<main>
+  <form class="wish-form" id="wishForm">
+    <textarea id="wishInput" placeholder="Nhập điều ước của bạn... nhưng hãy cẩn thận." maxlength="200" required></textarea>
+    <button type="submit" class="btn" id="wishBtn">Ước Nguyện</button>
+    <div class="status" id="status"></div>
+  </form>
+
+  <div class="tree-scene" id="treeScene">
+    <div class="tree-wrap" id="treeWrap">
+      <!--
+        Ảnh cây liễu thật: đặt file ảnh (ví dụ willow.jpg) cùng thư mục với index.html
+        trên GitHub repo. Nên chọn ảnh cây liễu rủ (weeping willow), càng u ám/tương phản
+        càng hợp tone — trang sẽ tự chuyển đen trắng + làm tối viền cho đồng bộ theme.
+        Gợi ý nguồn ảnh miễn phí bản quyền: unsplash.com, pexels.com, pixabay.com
+        (tìm từ khoá "weeping willow tree").
+      -->
+      <img src="willow.jpg" alt="Cây liễu ước nguyện" id="treeImg">
+    </div>
+    <div class="prompt-text" id="promptText">Bấm liên tục vào cây để ước</div>
+    <div class="counter" id="counter">0 / 5</div>
+  </div>
+
+  <button class="btn restart" id="restartBtn">Ước Lại Từ Đầu</button>
+</main>
+
+<footer>TABI CAT CURIOSITIES — SỬ DỤNG TỰ CHỊU TRÁCH NHIỆM</footer>
+
+<div class="scare-layer" id="scareLayer">
+  <div class="stickman" id="stickman">
+    <svg viewBox="0 0 100 140">
+      <circle cx="50" cy="20" r="14" fill="none" class="stick-limb"></circle>
+      <line x1="50" y1="34" x2="50" y2="90" class="stick-limb"></line>
+      <!-- chân -->
+      <line x1="50" y1="90" x2="30" y2="130" class="stick-limb leg-l"></line>
+      <line x1="50" y1="90" x2="70" y2="130" class="stick-limb leg-r"></line>
+      <!-- tay còn lại buông thõng -->
+      <line x1="50" y1="55" x2="30" y2="80" class="stick-limb"></line>
+      <!-- tay cầm bút, ẩn ban đầu -->
+      <g class="arm-pen">
+        <line x1="50" y1="55" x2="78" y2="50" class="stick-limb"></line>
+        <line x1="78" y1="50" x2="92" y2="45" class="stick-limb" stroke="#8a1c1c"></line>
+      </g>
+    </svg>
+  </div>
+  <div class="scrawl" id="scrawl"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ CẤU HÌNH GOOGLE SHEETS ============
+    1. Tạo Google Sheet mới.
+    2. Extensions > Apps Script, dán đoạn code doPost() (mình gửi kèm hướng dẫn riêng bên dưới chat).
+    3. Deploy > New deployment > Web app > Execute as: Me > Who has access: Anyone.
+    4. Copy URL được cấp, dán vào biến GOOGLE_SCRIPT_URL bên dưới.
+  ================================================= */
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLPHW4gYxKhXvTpeWnv-4a5T89sBkFQbv5IU0ECovzv53po3qc0VJbqm0qb5aLANt5EQ/exec";
+
+  const music = document.getElementById('bg-music');
+  const wishForm = document.getElementById('wishForm');
+  const wishInput = document.getElementById('wishInput');
+  const wishBtn = document.getElementById('wishBtn');
+  const statusEl = document.getElementById('status');
+  const treeScene = document.getElementById('treeScene');
+  const treeWrap = document.getElementById('treeWrap');
+  const promptText = document.getElementById('promptText');
+  const counterEl = document.getElementById('counter');
+  const restartBtn = document.getElementById('restartBtn');
+  const scareLayer = document.getElementById('scareLayer');
+  const stickman = document.getElementById('stickman');
+  const scrawl = document.getElementById('scrawl');
+  const flash = document.getElementById('flash');
+
+  let musicStarted = false;
+  let clickCount = 0;
+  const CLICKS_NEEDED = 5;
+  let currentWish = "";
+  let scareTriggered = false;
+
+  function tryStartMusic(){
+    if(musicStarted) return;
+    music.volume = 0.55;
+    music.play().then(()=>{ musicStarted = true; }).catch(()=>{ /* chờ tương tác tiếp theo */ });
+  }
+  document.addEventListener('click', tryStartMusic, { once:false });
+  document.addEventListener('touchstart', tryStartMusic, { once:false });
+
+  /* --- Gửi điều ước lên Google Sheets --- */
+  function saveWishToSheet(wishText){
+    if(!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.indexOf("PASTE_YOUR") === 0){
+      console.warn("Chưa cấu hình GOOGLE_SCRIPT_URL — điều ước sẽ không được lưu.");
+      return Promise.resolve();
+    }
+    return fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors", // Apps Script Web App thường không trả CORS header cho client
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        wish: wishText,
+        time: new Date().toISOString()
+      })
+    });
+  }
+
+  wishForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    const val = wishInput.value.trim();
+    if(!val) return;
+    currentWish = val;
+    wishBtn.disabled = true;
+    statusEl.textContent = "Đang khắc điều ước vào thân cây...";
+
+    saveWishToSheet(val)
+      .catch(()=>{})
+      .finally(()=>{
+        statusEl.textContent = "";
+        wishForm.classList.add('hidden');
+        treeScene.classList.add('active');
+      });
+  });
+
+  treeWrap.addEventListener('click', function(){
+    if(scareTriggered) return;
+    clickCount++;
+    counterEl.textContent = Math.min(clickCount, CLICKS_NEEDED) + " / " + CLICKS_NEEDED;
+    treeWrap.classList.remove('shake'); void treeWrap.offsetWidth; treeWrap.classList.add('shake');
+
+    if(clickCount === 1){
+      promptText.textContent = "Bấm liên tục để ước...";
+    } else if(clickCount >= CLICKS_NEEDED - 1 && clickCount < CLICKS_NEEDED){
+      promptText.textContent = "Có gì đó đang đến gần...";
+    }
+
+    if(clickCount >= CLICKS_NEEDED){
+      triggerScare();
+    }
+  });
+
+  function triggerScare(){
+    scareTriggered = true;
+    promptText.textContent = "";
+    scareLayer.classList.add('active');
+
+    setTimeout(()=>{
+      stickman.classList.add('walking');
+      stickman.classList.add('walked-in');
+    }, 100);
+
+    setTimeout(()=>{
+      stickman.classList.remove('walking');
+      stickman.classList.add('writing');
+      typeScrawl(`Chúc bạn chết\ncùng ước nguyện.`);
+    }, 2700);
+
+    setTimeout(()=>{
+      flash.classList.add('go');
+    }, 5600);
+
+    setTimeout(()=>{
+      restartBtn.classList.add('show');
+    }, 6200);
+  }
+
+  function typeScrawl(text){
+    let i = 0;
+    scrawl.innerHTML = "";
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    function step(){
+      if(i <= text.length){
+        scrawl.textContent = text.slice(0,i);
+        scrawl.appendChild(cursor);
+        i++;
+        setTimeout(step, 55);
+      }
+    }
+    step();
+  }
+
+  restartBtn.addEventListener('click', function(){
+    location.reload();
+  });
+
+})();
+</script>
+
+</body>
+</html>
